@@ -28,7 +28,7 @@ class turn:
 	self.orientation2 = 0
 	self.vect = []
 	self.aligned = False
-	self.
+	self.check_alignment = True
         # A publisher for the move data
         self.pub = rospy.Publisher('/mobile_base/commands/velocity',
                                    Twist,
@@ -48,8 +48,27 @@ class turn:
         rospy.signal_shutdown("User exited MORSE simulation")
         return True
 
+    def check_alignement(self, pose_data):
+    	quaternion = (pose_data.pose.pose.orientation.x,
+			pose_data.pose.pose.orientation.y, 
+			pose_data.pose.pose.orientation.z, 
+			pose_data.pose.pose.orientation.w)
+		euler = tf.transformations.euler_from_quaternion(quaternion)
+		roll = euler[0]
+		pitch = euler[1]
+		yaw = euler[2]
+		if yaw < 0:
+			yaw = yaw + math.pi
 
-    def align(self, pose_data,sensor_data):
+
+		command = Twist()
+		print (yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))
+		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))>0.06):
+			self.aligned = False
+		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))<0.06):
+			self.aligned = True
+
+    def align(self, pose_data):
 	#refined_sensor_data = sensor_data.ranges[71:569]
 	    #print len(refined_sensor_data)
 	if not self.aligned:
@@ -80,66 +99,71 @@ class turn:
 		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))<0.06):
 			self.aligned = True
 #-----------------------------------------------------------------------------
-
     def callBack(self,pose_data,sensor_data):
-	if self.aligned:
-		#self.distance=rospy.get_param('turn')
-		refined_sensor_data = sensor_data.ranges[71:569]
-		#print len(refined_sensor_data)
-		quaternion = (pose_data.pose.pose.orientation.x,
-			pose_data.pose.pose.orientation.y, 
-			pose_data.pose.pose.orientation.z, 
-			pose_data.pose.pose.orientation.w)
-		euler = tf.transformations.euler_from_quaternion(quaternion)
-		roll = euler[0]
-		pitch = euler[1]
-		yaw = euler[2]
-		if yaw < 0:
-			yaw = yaw + math.pi
+	#self.distance=rospy.get_param('turn')
+	if self.check_alignement:
+		self.check_alignment(pose_data):
+		self.check_alignement = False
+		if not self.aligned:
+			self.align()
+		
+	refined_sensor_data = sensor_data.ranges[71:569]
+	#print len(refined_sensor_data)
+	quaternion = (pose_data.pose.pose.orientation.x,
+		pose_data.pose.pose.orientation.y, 
+		pose_data.pose.pose.orientation.z, 
+		pose_data.pose.pose.orientation.w)
+	euler = tf.transformations.euler_from_quaternion(quaternion)
+	roll = euler[0]
+	pitch = euler[1]
+	yaw = euler[2]
+	if yaw < 0:
+		yaw = yaw + math.pi
 
-		print "came here"
-		if self.orientation1 == -1000:
-			self.orientation1 = yaw
-		self.orientation2 = yaw 
+	print "came here"
+	if self.orientation1 == -1000:
+		self.orientation1 = yaw
+	self.orientation2 = yaw 
 
+	stop = False
+	command = Twist()
+	command.linear.x = 0.0
+	command.linear.y = 0.0
+	command.linear.z = 0.0
+	command.angular.x = 0.0
+	command.angular.y = 0.0
+	command.angular.z = 0.2
+
+	delta =  self.orientation2 - self.orientation1
+	if delta < 0:
+		delta = delta + math.pi
+	#print self.orientation1, self.orientation2, delta
+	if delta >= math.pi/2.00:
+		stop = True
+	if stop:
+		command.angular.z = 0.0
+
+		#rospy.sleep(10.0)
 		stop = False
-		command = Twist()
-		command.linear.x = 0.0
-		command.linear.y = 0.0
-		command.linear.z = 0.0
-		command.angular.x = 0.0
-		command.angular.y = 0.0
-		command.angular.z = 0.2
+		self.orientation1 = -1000
 
-		delta =  self.orientation2 - self.orientation1
-		if delta < 0:
-			delta = delta + math.pi
-		#print self.orientation1, self.orientation2, delta
-		if delta >= math.pi/2.00:
-			stop = True
-		if stop:
-			command.angular.z = 0.0
+		maxIndice = np.argmax(refined_sensor_data)
+		print maxIndice, refined_sensor_data[maxIndice]
 
-			#rospy.sleep(10.0)
-			stop = False
-			self.orientation1 = -1000
+		if refined_sensor_data[maxIndice] >3 :
+			self.vect.append(1)
+		else:
+			self.vect.append(0)
+	time.sleep(5)
+	pub.publish(command) 
+	i1 = refined_sensor_data[0]
 
-			maxIndice = np.argmax(refined_sensor_data)
-			print maxIndice, refined_sensor_data[maxIndice]
-
-			if refined_sensor_data[maxIndice] >3 :
-				self.vect.append(1)
-			else:
-				self.vect.append(0)
-		time.sleep(5)
-		pub.publish(command) 
-		i1 = refined_sensor_data[0]
-
-		for i in refined_sensor_data:
-			pass
-		if len(self.vect) == 4:
-			print self.vect
-			self.finalize()
+	for i in refined_sensor_data:
+		pass
+	if len(self.vect) == 4:
+		print self.vect
+		self.align(pose_data)
+		self.finalize()
 
 
 
