@@ -3,12 +3,10 @@
 
 # Every python controller needs this line
 import rospy
-import numpy
 # The velocity command message
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 import sys; 
-
 
 from std_msgs.msg import Int32 
 from nav_msgs.msg import Odometry
@@ -21,8 +19,6 @@ from tf.transformations import euler_from_quaternion
 # mathematical helper functions
 import math 
 import numpy as np
-
-
 import time
 class turn:
     def __init__(self, distance):
@@ -155,12 +151,12 @@ class turn:
 
 if __name__ == '__main__':
     
-    rospy.init_node('annotate_map')
-    input_var=1
-    st =turn(input_var)
-# A publisher for the move data
-    pub = rospy.Publisher('/mobile_base/commands/velocity',
-                          Twist,
-                          queue_size=10)
-    
-    rospy.spin()
+	rospy.init_node('annotate_map')
+	input_var=1
+	st =turn(input_var)
+	# A publisher for the move data
+	pub = rospy.Publisher('/mobile_base/commands/velocity',
+	          Twist,
+	          queue_size=10)
+	
+	rospy.spin()
