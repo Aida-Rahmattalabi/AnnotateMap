@@ -28,7 +28,7 @@ class turn:
 	self.orientation2 = 0
 	self.vect = []
 	self.aligned = False
-	self.check_alignment = True
+	self.check_aligned = True
         # A publisher for the move data
         self.pub = rospy.Publisher('/mobile_base/commands/velocity',
                                    Twist,
@@ -53,20 +53,20 @@ class turn:
 			pose_data.pose.pose.orientation.y, 
 			pose_data.pose.pose.orientation.z, 
 			pose_data.pose.pose.orientation.w)
-		euler = tf.transformations.euler_from_quaternion(quaternion)
-		roll = euler[0]
-		pitch = euler[1]
-		yaw = euler[2]
-		if yaw < 0:
-			yaw = yaw + math.pi
+	euler = tf.transformations.euler_from_quaternion(quaternion)
+	roll = euler[0]
+	pitch = euler[1]
+	yaw = euler[2]
+	if yaw < 0:
+		yaw = yaw + math.pi
 
 
-		command = Twist()
-		print (yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))
-		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))>0.06):
-			self.aligned = False
-		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))<0.06):
-			self.aligned = True
+	command = Twist()
+	print (yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))
+	if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))>0.06):
+		self.aligned = False
+	if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))<0.06):
+		self.aligned = True
 
     def align(self, pose_data):
 	#refined_sensor_data = sensor_data.ranges[71:569]
@@ -101,11 +101,11 @@ class turn:
 #-----------------------------------------------------------------------------
     def callBack(self,pose_data,sensor_data):
 	#self.distance=rospy.get_param('turn')
-	if self.check_alignement:
-		self.check_alignment(pose_data):
-		self.check_alignement = False
+	if self.check_aligned:
+		self.check_alignement(pose_data)
+		self.check_aligned = False
 		if not self.aligned:
-			self.align()
+			self.align(pose_data)
 		
 	refined_sensor_data = sensor_data.ranges[71:569]
 	#print len(refined_sensor_data)
