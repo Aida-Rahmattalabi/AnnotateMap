@@ -49,57 +49,61 @@ class turn:
         return True
 
     def check_alignement(self, pose_data):
+
+	#-----------------------------Find Robots Orientation--------------------------
     	quaternion = (pose_data.pose.pose.orientation.x,
 			pose_data.pose.pose.orientation.y, 
 			pose_data.pose.pose.orientation.z, 
 			pose_data.pose.pose.orientation.w)
 	euler = tf.transformations.euler_from_quaternion(quaternion)
-	#------------------------------------------------------------
+	
 	roll = euler[0]
 	pitch = euler[1]
 	yaw = euler[2]
-	#------------------------------------------------------------
+	#--------------------Correct Orientation to be between 0 to 2pi-----------------
 	if yaw < 0:
-		yaw = yaw + math.pi
-
-	#print (yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))
-	if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))>=0.06):
+		yaw = yaw + 2*math.pi
+	#-------------------------------------------------------------------------------	
+	#print abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))
+	if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))>=0.06:
 		self.aligned = False
-	if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))<0.06):
+	if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))<0.06:
 		self.aligned = True
+	#print self.aligned
+
 
     def align(self, pose_data):
-	#refined_sensor_data = sensor_data.ranges[71:569]
-	    #print len(refined_sensor_data)
+
+	command = Twist()
+	command.linear.x = 0.0
+	command.linear.y = 0.0
+	command.linear.z = 0.0
+	command.angular.x = 0.0
+	command.angular.y = 0.0
 	if not self.aligned:
 		quaternion = (pose_data.pose.pose.orientation.x,
 			pose_data.pose.pose.orientation.y, 
 			pose_data.pose.pose.orientation.z, 
 			pose_data.pose.pose.orientation.w)
 		euler = tf.transformations.euler_from_quaternion(quaternion)
-	#------------------------------------------------------------
+
+	#-----------------------------Find Robots Orientation--------------------------
 		roll = euler[0]
 		pitch = euler[1]
 		yaw = euler[2]
-	#------------------------------------------------------------
+	#--------------------Correct Orientation to be between 0 to 2pi-----------------
 		if yaw < 0:
-			yaw = yaw + math.pi
-		command = Twist()
-		print (yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))
-		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))>0.04):
+			yaw = yaw + 2*math.pi
+		#-------------------------------------------------------------------------------	
+		if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))>=0.06:
+			command.angular.z = -0.1 *np.sign(yaw - round(yaw/(math.pi/2))*(math.pi/2))
+			pub.publish(command) 
 
-		    command.linear.x = 0.0
-		    command.linear.y = 0.0
-		    command.linear.z = 0.0
-		    command.angular.x = 0.0
-		    command.angular.y = 0.0
-		    command.angular.z = 0.1
-
-		    pub.publish(command) 
-		if ((yaw/(math.pi/2)) - math.floor((yaw/(math.pi/2)))<0.04):
+		if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))<0.06:
 			self.aligned = True
 #-----------------------------------------------------------------------------
     def callBack(self,pose_data,sensor_data):
+	
 	#self.distance=rospy.get_param('turn')
 	if self.check_aligned:
 		self.check_alignement(pose_data)
@@ -107,7 +111,7 @@ class turn:
 			self.align(pose_data)
 		if self.aligned:
 			self.check_aligned = False
-	print self.aligned, self.check_aligned
+	#print self.aligned
 	if not self.check_aligned:	
 		refined_sensor_data = sensor_data.ranges[71:569]
 		quaternion = (pose_data.pose.pose.orientation.x,
@@ -118,8 +122,9 @@ class turn:
 		roll = euler[0]
 		pitch = euler[1]
 		yaw = euler[2]
+
 		if yaw < 0:
-			yaw = yaw + math.pi
+			yaw = yaw + 2* math.pi
 
 		print "came here"
 		#print self.aligned, self.check_aligned
@@ -137,10 +142,10 @@ class turn:
 		command.angular.z = 0.3
 
 		delta =  self.orientation2 - self.orientation1
-		if delta < 0:
-			delta = delta + math.pi
-		#print self.orientation1, self.orientation2, delta
-		if delta >= math.pi/2.00:
+		if delta > 2*math.pi:
+			delta = delta - 2*math.pi
+		print self.orientation1, self.orientation2, delta
+		if abs(delta) >= math.pi/2.00:
 			stop = True
 		if stop:
 			command.angular.z = 0.0
@@ -154,8 +159,10 @@ class turn:
 
 			if refined_sensor_data[maxIndice] > self.distance :
 				self.vect.append(1)
+				self.check_aligned = True
 			else:
 				self.vect.append(0)
+				self.check_aligned = True
 		#time.sleep(5)
 		pub.publish(command) 
 		i1 = refined_sensor_data[0]
@@ -171,15 +178,13 @@ class turn:
 
 
 
-
-
 		
 
 if __name__ == '__main__':
-    
+    	
 	rospy.init_node('annotate_map')
 	input_var=3
-	st =turn(input_var)
+	robot =turn(input_var)
 	# A publisher for the move data
 	pub = rospy.Publisher('/mobile_base/commands/velocity',
 	          Twist,
