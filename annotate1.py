@@ -96,11 +96,11 @@ class turn:
 		if yaw < 0:
 			yaw = yaw + 2*math.pi
 		#-------------------------------------------------------------------------------	
-		if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))>=0.07:
+		if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))>=0.06:
 			command.angular.z = -0.1 *np.sign(yaw - round(yaw/(math.pi/2))*(math.pi/2))  
 			self.pub.publish(command) 
 
-		if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))<0.07:
+		if abs(yaw - round(yaw/(math.pi/2))*(math.pi/2))<0.06:
 			self.aligned = True
 #-----------------------------------------------------------------------------
     def callBack(self,pose_data,sensor_data):
